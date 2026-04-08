@@ -164,7 +164,7 @@ def _try_claude_ai_json(data) -> Optional[str]:
             for item in chat_msgs:
                 if not isinstance(item, dict):
                     continue
-                role = item.get("role", "")
+                role = item.get("role", "") or item.get("sender", "")
                 text = _extract_content(item.get("content", ""))
                 if role in ("user", "human") and text:
                     all_messages.append(("user", text))
@@ -179,7 +179,7 @@ def _try_claude_ai_json(data) -> Optional[str]:
     for item in data:
         if not isinstance(item, dict):
             continue
-        role = item.get("role", "")
+        role = item.get("role", "") or item.get("sender", "")
         text = _extract_content(item.get("content", ""))
         if role in ("user", "human") and text:
             messages.append(("user", text))
