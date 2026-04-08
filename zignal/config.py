@@ -1,15 +1,15 @@
 """
-MemPalace configuration system.
+Signal configuration system.
 
-Priority: env vars > config file (~/.mempalace/config.json) > defaults
+Priority: env vars > config file (~/.signal/config.json) > defaults
 """
 
 import json
 import os
 from pathlib import Path
 
-DEFAULT_PALACE_PATH = os.path.expanduser("~/.mempalace/palace")
-DEFAULT_COLLECTION_NAME = "mempalace_drawers"
+DEFAULT_PALACE_PATH = os.path.expanduser("~/.signal/palace")
+DEFAULT_COLLECTION_NAME = "signal_drawers"
 
 DEFAULT_TOPIC_WINGS = [
     "emotions",
@@ -62,8 +62,8 @@ DEFAULT_HALL_KEYWORDS = {
 }
 
 
-class MempalaceConfig:
-    """Configuration manager for MemPalace.
+class SignalConfig:
+    """Configuration manager for Signal.
 
     Load order: env vars > config file > defaults.
     """
@@ -73,10 +73,10 @@ class MempalaceConfig:
 
         Args:
             config_dir: Override config directory (useful for testing).
-                        Defaults to ~/.mempalace.
+                        Defaults to ~/.signal.
         """
         self._config_dir = (
-            Path(config_dir) if config_dir else Path(os.path.expanduser("~/.mempalace"))
+            Path(config_dir) if config_dir else Path(os.path.expanduser("~/.signal"))
         )
         self._config_file = self._config_dir / "config.json"
         self._people_map_file = self._config_dir / "people_map.json"

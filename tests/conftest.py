@@ -1,11 +1,11 @@
 """
-conftest.py — Shared fixtures for MemPalace tests.
+conftest.py — Shared fixtures for Signal tests.
 
 Provides isolated palace and knowledge graph instances so tests never
 touch the user's real data or leak temp files on failure.
 
 HOME is redirected to a temp directory at module load time — before any
-mempalace imports — so that module-level initialisations (e.g.
+signal imports — so that module-level initialisations (e.g.
 ``_kg = KnowledgeGraph()`` in mcp_server) write to a throwaway location
 instead of the real user profile.
 """
@@ -14,9 +14,9 @@ import os
 import shutil
 import tempfile
 
-# ── Isolate HOME before any mempalace imports ──────────────────────────
+# ── Isolate HOME before any signal imports ──────────────────────────
 _original_env = {}
-_session_tmp = tempfile.mkdtemp(prefix="mempalace_session_")
+_session_tmp = tempfile.mkdtemp(prefix="signal_session_")
 
 for _var in ("HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH"):
     _original_env[_var] = os.environ.get(_var)
@@ -26,12 +26,12 @@ os.environ["USERPROFILE"] = _session_tmp
 os.environ["HOMEDRIVE"] = os.path.splitdrive(_session_tmp)[0] or "C:"
 os.environ["HOMEPATH"] = os.path.splitdrive(_session_tmp)[1] or _session_tmp
 
-# Now it is safe to import mempalace modules that trigger initialisation.
+# Now it is safe to import zignal modules that trigger initialisation.
 import chromadb  # noqa: E402
 import pytest  # noqa: E402
 
-from mempalace.config import MempalaceConfig  # noqa: E402
-from mempalace.knowledge_graph import KnowledgeGraph  # noqa: E402
+from zignal.config import SignalConfig  # noqa: E402
+from zignal.knowledge_graph import KnowledgeGraph  # noqa: E402
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -54,7 +54,7 @@ def _isolate_home():
 @pytest.fixture
 def tmp_dir():
     """Create and auto-cleanup a temporary directory."""
-    d = tempfile.mkdtemp(prefix="mempalace_test_")
+    d = tempfile.mkdtemp(prefix="signal_test_")
     yield d
     shutil.rmtree(d, ignore_errors=True)
 
@@ -69,21 +69,21 @@ def palace_path(tmp_dir):
 
 @pytest.fixture
 def config(tmp_dir, palace_path):
-    """A MempalaceConfig pointing at the temp palace."""
+    """A SignalConfig pointing at the temp palace."""
     cfg_dir = os.path.join(tmp_dir, "config")
     os.makedirs(cfg_dir)
     import json
 
     with open(os.path.join(cfg_dir, "config.json"), "w") as f:
         json.dump({"palace_path": palace_path}, f)
-    return MempalaceConfig(config_dir=cfg_dir)
+    return SignalConfig(config_dir=cfg_dir)
 
 
 @pytest.fixture
 def collection(palace_path):
     """A ChromaDB collection pre-seeded in the temp palace."""
     client = chromadb.PersistentClient(path=palace_path)
-    col = client.get_or_create_collection("mempalace_drawers")
+    col = client.get_or_create_collection("signal_drawers")
     return col
 
 

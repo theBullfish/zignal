@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-MemPalace MCP Server — read/write palace access for Claude Code
+Signal MCP Server — read/write palace access for Claude Code
 ================================================================
-Install: claude mcp add mempalace -- python -m mempalace.mcp_server
+Install: claude mcp add signal -- python -m signal.mcp_server
 
 Tools (read):
-  mempalace_status          — total drawers, wing/room breakdown
-  mempalace_list_wings      — all wings with drawer counts
-  mempalace_list_rooms      — rooms within a wing
-  mempalace_get_taxonomy    — full wing → room → count tree
-  mempalace_search          — semantic search, optional wing/room filter
-  mempalace_check_duplicate — check if content already exists before filing
+  signal_status          — total drawers, wing/room breakdown
+  signal_list_wings      — all wings with drawer counts
+  signal_list_rooms      — rooms within a wing
+  signal_get_taxonomy    — full wing → room → count tree
+  signal_search          — semantic search, optional wing/room filter
+  signal_check_duplicate — check if content already exists before filing
 
 Tools (write):
-  mempalace_add_drawer      — file verbatim content into a wing/room
-  mempalace_delete_drawer   — remove a drawer by ID
+  signal_add_drawer      — file verbatim content into a wing/room
+  signal_delete_drawer   — remove a drawer by ID
 """
 
 import sys
@@ -23,7 +23,7 @@ import logging
 import hashlib
 from datetime import datetime
 
-from .config import MempalaceConfig
+from .config import SignalConfig
 from .version import __version__
 from .searcher import search_memories
 from .palace_graph import traverse, find_tunnels, graph_stats
@@ -34,9 +34,9 @@ from .knowledge_graph import KnowledgeGraph
 _kg = KnowledgeGraph()
 
 logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stderr)
-logger = logging.getLogger("mempalace_mcp")
+logger = logging.getLogger("signal_mcp")
 
-_config = MempalaceConfig()
+_config = SignalConfig()
 
 
 def _get_collection(create=False):
@@ -53,7 +53,7 @@ def _get_collection(create=False):
 def _no_palace():
     return {
         "error": "No palace found",
-        "hint": "Run: mempalace init <dir> && mempalace mine <dir>",
+        "hint": "Run: signal init <dir> && signal mine <dir>",
     }
 
 
@@ -88,18 +88,18 @@ def tool_status():
 
 # ── AAAK Dialect Spec ─────────────────────────────────────────────────────────
 # Included in status response so the AI learns it on first wake-up call.
-# Also available via mempalace_get_aaak_spec tool.
+# Also available via signal_get_aaak_spec tool.
 
-PALACE_PROTOCOL = """IMPORTANT — MemPalace Memory Protocol:
-1. ON WAKE-UP: Call mempalace_status to load palace overview + AAAK spec.
-2. BEFORE RESPONDING about any person, project, or past event: call mempalace_kg_query or mempalace_search FIRST. Never guess — verify.
+PALACE_PROTOCOL = """IMPORTANT — Signal Memory Protocol:
+1. ON WAKE-UP: Call signal_status to load palace overview + AAAK spec.
+2. BEFORE RESPONDING about any person, project, or past event: call signal_kg_query or signal_search FIRST. Never guess — verify.
 3. IF UNSURE about a fact (name, gender, age, relationship): say "let me check" and query the palace. Wrong is worse than slow.
-4. AFTER EACH SESSION: call mempalace_diary_write to record what happened, what you learned, what matters.
-5. WHEN FACTS CHANGE: call mempalace_kg_invalidate on the old fact, mempalace_kg_add for the new one.
+4. AFTER EACH SESSION: call signal_diary_write to record what happened, what you learned, what matters.
+5. WHEN FACTS CHANGE: call signal_kg_invalidate on the old fact, signal_kg_add for the new one.
 
 This protocol ensures the AI KNOWS before it speaks. Storage is not memory — but storage + this protocol = memory."""
 
-AAAK_SPEC = """AAAK is a compressed memory dialect that MemPalace uses for efficient storage.
+AAAK_SPEC = """AAAK is a compressed memory dialect that Signal uses for efficient storage.
 It is designed to be readable by both humans and LLMs without decoding.
 
 FORMAT:
@@ -440,17 +440,17 @@ def tool_diary_read(agent_name: str, last_n: int = 10):
 # ==================== MCP PROTOCOL ====================
 
 TOOLS = {
-    "mempalace_status": {
+    "signal_status": {
         "description": "Palace overview — total drawers, wing and room counts",
         "input_schema": {"type": "object", "properties": {}},
         "handler": tool_status,
     },
-    "mempalace_list_wings": {
+    "signal_list_wings": {
         "description": "List all wings with drawer counts",
         "input_schema": {"type": "object", "properties": {}},
         "handler": tool_list_wings,
     },
-    "mempalace_list_rooms": {
+    "signal_list_rooms": {
         "description": "List rooms within a wing (or all rooms if no wing given)",
         "input_schema": {
             "type": "object",
@@ -460,17 +460,17 @@ TOOLS = {
         },
         "handler": tool_list_rooms,
     },
-    "mempalace_get_taxonomy": {
+    "signal_get_taxonomy": {
         "description": "Full taxonomy: wing → room → drawer count",
         "input_schema": {"type": "object", "properties": {}},
         "handler": tool_get_taxonomy,
     },
-    "mempalace_get_aaak_spec": {
-        "description": "Get the AAAK dialect specification — the compressed memory format MemPalace uses. Call this if you need to read or write AAAK-compressed memories.",
+    "signal_get_aaak_spec": {
+        "description": "Get the AAAK dialect specification — the compressed memory format Signal uses. Call this if you need to read or write AAAK-compressed memories.",
         "input_schema": {"type": "object", "properties": {}},
         "handler": tool_get_aaak_spec,
     },
-    "mempalace_kg_query": {
+    "signal_kg_query": {
         "description": "Query the knowledge graph for an entity's relationships. Returns typed facts with temporal validity. E.g. 'Max' → child_of Alice, loves chess, does swimming. Filter by date with as_of to see what was true at a point in time.",
         "input_schema": {
             "type": "object",
@@ -492,7 +492,7 @@ TOOLS = {
         },
         "handler": tool_kg_query,
     },
-    "mempalace_kg_add": {
+    "signal_kg_add": {
         "description": "Add a fact to the knowledge graph. Subject → predicate → object with optional time window. E.g. ('Max', 'started_school', 'Year 7', valid_from='2026-09-01').",
         "input_schema": {
             "type": "object",
@@ -516,7 +516,7 @@ TOOLS = {
         },
         "handler": tool_kg_add,
     },
-    "mempalace_kg_invalidate": {
+    "signal_kg_invalidate": {
         "description": "Mark a fact as no longer true. E.g. ankle injury resolved, job ended, moved house.",
         "input_schema": {
             "type": "object",
@@ -533,7 +533,7 @@ TOOLS = {
         },
         "handler": tool_kg_invalidate,
     },
-    "mempalace_kg_timeline": {
+    "signal_kg_timeline": {
         "description": "Chronological timeline of facts. Shows the story of an entity (or everything) in order.",
         "input_schema": {
             "type": "object",
@@ -546,12 +546,12 @@ TOOLS = {
         },
         "handler": tool_kg_timeline,
     },
-    "mempalace_kg_stats": {
+    "signal_kg_stats": {
         "description": "Knowledge graph overview: entities, triples, current vs expired facts, relationship types.",
         "input_schema": {"type": "object", "properties": {}},
         "handler": tool_kg_stats,
     },
-    "mempalace_traverse": {
+    "signal_traverse": {
         "description": "Walk the palace graph from a room. Shows connected ideas across wings — the tunnels. Like following a thread through the palace: start at 'chromadb-setup' in wing_code, discover it connects to wing_myproject (planning) and wing_user (feelings about it).",
         "input_schema": {
             "type": "object",
@@ -569,7 +569,7 @@ TOOLS = {
         },
         "handler": tool_traverse_graph,
     },
-    "mempalace_find_tunnels": {
+    "signal_find_tunnels": {
         "description": "Find rooms that bridge two wings — the hallways connecting different domains. E.g. what topics connect wing_code to wing_team?",
         "input_schema": {
             "type": "object",
@@ -580,12 +580,12 @@ TOOLS = {
         },
         "handler": tool_find_tunnels,
     },
-    "mempalace_graph_stats": {
+    "signal_graph_stats": {
         "description": "Palace graph overview: total rooms, tunnel connections, edges between wings.",
         "input_schema": {"type": "object", "properties": {}},
         "handler": tool_graph_stats,
     },
-    "mempalace_search": {
+    "signal_search": {
         "description": "Semantic search. Returns verbatim drawer content with similarity scores.",
         "input_schema": {
             "type": "object",
@@ -599,7 +599,7 @@ TOOLS = {
         },
         "handler": tool_search,
     },
-    "mempalace_check_duplicate": {
+    "signal_check_duplicate": {
         "description": "Check if content already exists in the palace before filing",
         "input_schema": {
             "type": "object",
@@ -614,7 +614,7 @@ TOOLS = {
         },
         "handler": tool_check_duplicate,
     },
-    "mempalace_add_drawer": {
+    "signal_add_drawer": {
         "description": "File verbatim content into the palace. Checks for duplicates first.",
         "input_schema": {
             "type": "object",
@@ -635,7 +635,7 @@ TOOLS = {
         },
         "handler": tool_add_drawer,
     },
-    "mempalace_delete_drawer": {
+    "signal_delete_drawer": {
         "description": "Delete a drawer by ID. Irreversible.",
         "input_schema": {
             "type": "object",
@@ -646,7 +646,7 @@ TOOLS = {
         },
         "handler": tool_delete_drawer,
     },
-    "mempalace_diary_write": {
+    "signal_diary_write": {
         "description": "Write to your personal agent diary in AAAK format. Your observations, thoughts, what you worked on, what matters. Each agent has their own diary with full history. Write in AAAK for compression — e.g. 'SESSION:2026-04-04|built.palace.graph+diary.tools|ALC.req:agent.diaries.in.aaak|★★★'. Use entity codes from the AAAK spec.",
         "input_schema": {
             "type": "object",
@@ -668,7 +668,7 @@ TOOLS = {
         },
         "handler": tool_diary_write,
     },
-    "mempalace_diary_read": {
+    "signal_diary_read": {
         "description": "Read your recent diary entries (in AAAK). See what past versions of yourself recorded — your journal across sessions.",
         "input_schema": {
             "type": "object",
@@ -701,7 +701,7 @@ def handle_request(request):
             "result": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {"tools": {}},
-                "serverInfo": {"name": "mempalace", "version": __version__},
+                "serverInfo": {"name": "zignal", "version": __version__},
             },
         }
     elif method == "notifications/initialized":
@@ -760,7 +760,7 @@ def handle_request(request):
 
 
 def main():
-    logger.info("MemPalace MCP Server starting...")
+    logger.info("Signal MCP Server starting...")
     while True:
         try:
             line = sys.stdin.readline()

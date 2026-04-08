@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
 """
-MemPalace — Give your AI a memory. No API key required.
+Signal — Give your AI a memory. No API key required.
 
 Two ways to ingest:
-  Projects:      mempalace mine ~/projects/my_app          (code, docs, notes)
-  Conversations: mempalace mine ~/chats/ --mode convos     (Claude, ChatGPT, Slack)
+  Projects:      signal mine ~/projects/my_app          (code, docs, notes)
+  Conversations: signal mine ~/chats/ --mode convos     (Claude, ChatGPT, Slack)
 
 Same palace. Same search. Different ingest strategies.
 
 Commands:
-    mempalace init <dir>                  Detect rooms from folder structure
-    mempalace split <dir>                 Split concatenated mega-files into per-session files
-    mempalace mine <dir>                  Mine project files (default)
-    mempalace mine <dir> --mode convos    Mine conversation exports
-    mempalace search "query"              Find anything, exact words
-    mempalace wake-up                     Show L0 + L1 wake-up context
-    mempalace wake-up --wing my_app       Wake-up for a specific project
-    mempalace status                      Show what's been filed
+    signal init <dir>                  Detect rooms from folder structure
+    signal split <dir>                 Split concatenated mega-files into per-session files
+    signal mine <dir>                  Mine project files (default)
+    signal mine <dir> --mode convos    Mine conversation exports
+    signal search "query"              Find anything, exact words
+    signal wake-up                     Show L0 + L1 wake-up context
+    signal wake-up --wing my_app       Wake-up for a specific project
+    signal status                      Show what's been filed
 
 Examples:
-    mempalace init ~/projects/my_app
-    mempalace mine ~/projects/my_app
-    mempalace mine ~/chats/claude-sessions --mode convos
-    mempalace search "why did we switch to GraphQL"
-    mempalace search "pricing discussion" --wing my_app --room costs
+    signal init ~/projects/my_app
+    signal mine ~/projects/my_app
+    signal mine ~/chats/claude-sessions --mode convos
+    signal search "why did we switch to GraphQL"
+    signal search "pricing discussion" --wing my_app --room costs
 """
 
 import os
@@ -31,7 +31,7 @@ import sys
 import argparse
 from pathlib import Path
 
-from .config import MempalaceConfig
+from .config import SignalConfig
 
 
 def cmd_init(args):
@@ -60,11 +60,11 @@ def cmd_init(args):
 
     # Pass 2: detect rooms from folder structure
     detect_rooms_local(project_dir=args.dir, yes=getattr(args, "yes", False))
-    MempalaceConfig().init()
+    SignalConfig().init()
 
 
 def cmd_mine(args):
-    palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
+    palace_path = os.path.expanduser(args.palace) if args.palace else SignalConfig().palace_path
     include_ignored = []
     for raw in args.include_ignored or []:
         include_ignored.extend(part.strip() for part in raw.split(",") if part.strip())
@@ -99,7 +99,7 @@ def cmd_mine(args):
 def cmd_search(args):
     from .searcher import search, SearchError
 
-    palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
+    palace_path = os.path.expanduser(args.palace) if args.palace else SignalConfig().palace_path
     try:
         search(
             query=args.query,
@@ -116,7 +116,7 @@ def cmd_wakeup(args):
     """Show L0 (identity) + L1 (essential story) — the wake-up context."""
     from .layers import MemoryStack
 
-    palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
+    palace_path = os.path.expanduser(args.palace) if args.palace else SignalConfig().palace_path
     stack = MemoryStack(palace_path=palace_path)
 
     text = stack.wake_up(wing=args.wing)
@@ -141,7 +141,7 @@ def cmd_split(args):
         argv += ["--min-sessions", str(args.min_sessions)]
 
     old_argv = sys.argv
-    sys.argv = ["mempalace split"] + argv
+    sys.argv = ["signal split"] + argv
     try:
         split_main()
     finally:
@@ -151,7 +151,7 @@ def cmd_split(args):
 def cmd_status(args):
     from .miner import status
 
-    palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
+    palace_path = os.path.expanduser(args.palace) if args.palace else SignalConfig().palace_path
     status(palace_path=palace_path)
 
 
@@ -160,21 +160,21 @@ def cmd_repair(args):
     import chromadb
     import shutil
 
-    palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
+    palace_path = os.path.expanduser(args.palace) if args.palace else SignalConfig().palace_path
 
     if not os.path.isdir(palace_path):
         print(f"\n  No palace found at {palace_path}")
         return
 
     print(f"\n{'=' * 55}")
-    print("  MemPalace Repair")
+    print("  Signal Repair")
     print(f"{'=' * 55}\n")
     print(f"  Palace: {palace_path}")
 
     # Try to read existing drawers
     try:
         client = chromadb.PersistentClient(path=palace_path)
-        col = client.get_collection("mempalace_drawers")
+        col = client.get_collection("signal_drawers")
         total = col.count()
         print(f"  Drawers found: {total}")
     except Exception as e:
@@ -209,8 +209,8 @@ def cmd_repair(args):
     shutil.copytree(palace_path, backup_path)
 
     print("  Rebuilding collection...")
-    client.delete_collection("mempalace_drawers")
-    new_col = client.create_collection("mempalace_drawers")
+    client.delete_collection("signal_drawers")
+    new_col = client.create_collection("signal_drawers")
 
     filed = 0
     for i in range(0, len(all_ids), batch_size):
@@ -231,7 +231,7 @@ def cmd_compress(args):
     import chromadb
     from .dialect import Dialect
 
-    palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
+    palace_path = os.path.expanduser(args.palace) if args.palace else SignalConfig().palace_path
 
     # Load dialect (with optional entity config)
     config_path = args.config
@@ -250,10 +250,10 @@ def cmd_compress(args):
     # Connect to palace
     try:
         client = chromadb.PersistentClient(path=palace_path)
-        col = client.get_collection("mempalace_drawers")
+        col = client.get_collection("signal_drawers")
     except Exception:
         print(f"\n  No palace found at {palace_path}")
-        print("  Run: mempalace init <dir> then mempalace mine <dir>")
+        print("  Run: signal init <dir> then signal mine <dir>")
         sys.exit(1)
 
     # Query drawers in batches to avoid SQLite variable limit (~999)
@@ -321,7 +321,7 @@ def cmd_compress(args):
     # Store compressed versions (unless dry-run)
     if not args.dry_run:
         try:
-            comp_col = client.get_or_create_collection("mempalace_compressed")
+            comp_col = client.get_or_create_collection("signal_compressed")
             for doc_id, compressed, meta, stats in compressed_entries:
                 comp_meta = dict(meta)
                 comp_meta["compression_ratio"] = round(stats["ratio"], 1)
@@ -332,7 +332,7 @@ def cmd_compress(args):
                     metadatas=[comp_meta],
                 )
             print(
-                f"  Stored {len(compressed_entries)} compressed drawers in 'mempalace_compressed' collection."
+                f"  Stored {len(compressed_entries)} compressed drawers in 'signal_compressed' collection."
             )
         except Exception as e:
             print(f"  Error storing compressed drawers: {e}")
@@ -349,14 +349,14 @@ def cmd_compress(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="MemPalace — Give your AI a memory. No API key required.",
+        description="Signal — Give your AI a memory. No API key required.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
     parser.add_argument(
         "--palace",
         default=None,
-        help="Where the palace lives (default: from ~/.mempalace/config.json or ~/.mempalace/palace)",
+        help="Where the palace lives (default: from ~/.signal/config.json or ~/.signal/palace)",
     )
 
     sub = parser.add_subparsers(dest="command")
@@ -391,8 +391,8 @@ def main():
     )
     p_mine.add_argument(
         "--agent",
-        default="mempalace",
-        help="Your name — recorded on every drawer (default: mempalace)",
+        default="zignal",
+        help="Your name — recorded on every drawer (default: signal)",
     )
     p_mine.add_argument("--limit", type=int, default=0, help="Max files to process (0 = all)")
     p_mine.add_argument(

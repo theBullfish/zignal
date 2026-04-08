@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-entity_registry.py — Persistent personal entity registry for MemPalace.
+entity_registry.py — Persistent personal entity registry for Signal.
 
 Knows the difference between Riley (a person) and ever (an adverb).
 Built from three sources, in priority order:
@@ -9,7 +9,7 @@ Built from three sources, in priority order:
   3. Researched — what we looked up via Wikipedia for unknown words
 
 Usage:
-    from mempalace.entity_registry import EntityRegistry
+    from zignal.entity_registry import EntityRegistry
     registry = EntityRegistry.load()
     result = registry.lookup("Riley", context="I went with Riley today")
     # → {"type": "person", "confidence": 1.0, "source": "onboarding"}
@@ -181,7 +181,7 @@ def _wikipedia_lookup(word: str) -> dict:
     """
     try:
         url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(word)}"
-        req = urllib.request.Request(url, headers={"User-Agent": "MemPalace/1.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "Signal/1.0"})
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read())
 
@@ -266,7 +266,7 @@ class EntityRegistry:
     """
     Persistent personal entity registry.
 
-    Stored at ~/.mempalace/entity_registry.json
+    Stored at ~/.signal/entity_registry.json
     Schema:
     {
       "mode": "personal",   # work | personal | combo
@@ -280,7 +280,7 @@ class EntityRegistry:
           "confidence": 1.0
         }
       },
-      "projects": ["MemPalace", "Acme"],
+      "projects": ["Signal", "Acme"],
       "ambiguous_flags": ["riley", "max"],
       "wiki_cache": {
         "Sam": {"inferred_type": "person", "confidence": 0.9, "confirmed": true, ...}
@@ -288,7 +288,7 @@ class EntityRegistry:
     }
     """
 
-    DEFAULT_PATH = Path.home() / ".mempalace" / "entity_registry.json"
+    DEFAULT_PATH = Path.home() / ".signal" / "entity_registry.json"
 
     def __init__(self, data: dict, path: Path):
         self._data = data
@@ -552,7 +552,7 @@ class EntityRegistry:
         Scan session text for new entity candidates.
         Returns list of newly discovered candidates for review.
         """
-        from mempalace.entity_detector import extract_candidates, score_entity, classify_entity
+        from zignal.entity_detector import extract_candidates, score_entity, classify_entity
 
         lines = text.splitlines()
         candidates = extract_candidates(text)

@@ -1,12 +1,12 @@
 [project]
-name = "mempalace"
+name = "zignal"
 version = "3.0.0"
-description = "Give your AI a memory — mine projects and conversations into a searchable palace. No API key required."
+description = "Signal memory system — CFA topology, signal-chain cognition, trust-weighted retrieval. NAC Research Foundation."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
-    {name = "milla-jovovich"},
+    {name = "Brad Svenson"},
 ]
 keywords = [
     "ai", "memory", "llm", "rag", "chromadb", "mcp",
@@ -30,12 +30,12 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/milla-jovovich/mempalace"
-Repository = "https://github.com/milla-jovovich/mempalace"
-"Bug Tracker" = "https://github.com/milla-jovovich/mempalace/issues"
+Homepage = "https://github.com/theBullfish/signal"
+Repository = "https://github.com/theBullfish/signal"
+"Bug Tracker" = "https://github.com/theBullfish/signal/issues"
 
 [project.scripts]
-mempalace = "mempalace:main"
+signal = "zignal:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "ruff>=0.4.0"]
@@ -49,7 +49,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["mempalace"]
+packages = ["zignal"]
 
 [tool.ruff]
 line-length = 100
