@@ -27,13 +27,13 @@ classifiers = [
 dependencies = [
     "chromadb>=0.5.0,<0.7",
     "pyyaml>=6.0",
-    "signal-notation @ git+https://github.com/theBullfish/signal-notation.git",
+    "signal-notation @ git+https://github.com/theBullfish/zignal-notation.git",
 ]
 
 [project.urls]
-Homepage = "https://github.com/theBullfish/signal"
-Repository = "https://github.com/theBullfish/signal"
-"Bug Tracker" = "https://github.com/theBullfish/signal/issues"
+Homepage = "https://github.com/theBullfish/zignal"
+Repository = "https://github.com/theBullfish/zignal"
+"Bug Tracker" = "https://github.com/theBullfish/zignal/issues"
 
 [project.scripts]
 signal = "zignal:main"
