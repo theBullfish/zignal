@@ -1,0 +1,15 @@
+[Unit]
+Description=Zignal Palace Ingest Watcher
+After=network.target
+
+[Service]
+Type=simple
+User=brad
+WorkingDirectory=/home/brad
+ExecStart=/usr/bin/python3 /home/brad/zignal-ingest.py
+Restart=always
+RestartSec=10
+Environment=PATH=/home/brad/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=multi-user.target
