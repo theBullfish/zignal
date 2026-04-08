@@ -1,92 +1,111 @@
-# Contributing to MemPalace
+# Contributing to Zignal
 
-Thanks for wanting to help. MemPalace is open source and we welcome contributions of all sizes — from typo fixes to new features.
+Welcome. Whether you're fixing a typo or adding a new retrieval strategy, we're glad you're here.
+
+Zignal is forked from [MemPalace](https://github.com/milla-jovovich/mempalace) and maintained by [NAC Research Foundation](https://github.com/theBullfish) / Codex Labs. It's MIT licensed — your contributions stay open.
+
+---
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/milla-jovovich/mempalace.git
-cd mempalace
-pip install -e ".[dev]"    # installs with dev dependencies (pytest, build, twine)
-```
-
-## Running Tests
-
-```bash
+git clone https://github.com/theBullfish/zignal.git
+cd zignal
+pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
-All tests must pass before submitting a PR. Tests should run without API keys or network access.
-
-## Running Benchmarks
-
-```bash
-# Quick test (20 questions, ~30 seconds)
-python benchmarks/longmemeval_bench.py /path/to/longmemeval_s_cleaned.json --limit 20
-
-# Full benchmark (500 questions, ~5 minutes)
-python benchmarks/longmemeval_bench.py /path/to/longmemeval_s_cleaned.json
-```
-
-See [benchmarks/README.md](benchmarks/README.md) for data download instructions and reproduction guide.
+All tests must pass. No API keys or network access required.
 
 ## Project Structure
 
 ```
-mempalace/          ← core package (see mempalace/README.md for module guide)
+zignal/             ← core package
+├── cli.py          ← command-line interface
+├── config.py       ← SignalConfig and palace paths
+├── mcp_server.py   ← MCP tool definitions (19 tools)
+├── miner.py        ← project file miner
+├── convo_miner.py  ← conversation import miner
+├── searcher.py     ← semantic search engine
+├── knowledge_graph.py  ← temporal KG with trust weights
+├── palace_graph.py     ← graph traversal and tunnels
+├── layers.py       ← L0-L3 memory stack
+├── entity_detector.py  ← entity extraction from text
+├── room_detector_local.py  ← room detection from file structure
+└── normalize.py    ← text normalization
+
 benchmarks/         ← reproducible benchmark runners
-hooks/              ← Claude Code auto-save hooks
-examples/           ← usage examples
-tests/              ← test suite
-assets/             ← logo + brand
+tests/              ← test suite (pytest)
+examples/           ← usage examples and tutorials
+hooks/              ← Claude Code integration hooks
 ```
 
-## PR Guidelines
+## How to Contribute
 
-1. Fork the repo and create a feature branch: `git checkout -b feat/my-thing`
-2. Write your code
-3. Add or update tests if applicable
-4. Run `pytest tests/ -v` — everything must pass
-5. Commit with a clear message following [conventional commits](https://www.conventionalcommits.org/):
+### Small Fixes
+
+Just open a PR. Typos, docs, test coverage — no issue needed.
+
+### New Features
+
+Open an issue first. Describe what you want to build and why. We'll discuss the approach before you write code. This saves everyone time.
+
+### Bug Reports
+
+Include:
+- What you expected
+- What happened
+- Steps to reproduce
+- Python version and OS
+
+## Pull Request Process
+
+1. Fork and create a branch: `git checkout -b feat/my-thing`
+2. Write code + tests
+3. Run `pytest tests/ -v` — everything passes
+4. Run `ruff check zignal/` — no lint errors
+5. Commit with a clear message:
    - `feat: add Notion export format`
    - `fix: handle empty transcript files`
    - `docs: update MCP tool descriptions`
-   - `bench: add LoCoMo turn-level metrics`
-6. Push to your fork and open a PR against `main`
+6. Open a PR against `main`
 
 ## Code Style
 
-- **Formatting**: [Ruff](https://docs.astral.sh/ruff/) with 100-char line limit (configured in `pyproject.toml`)
+- **Formatter**: [Ruff](https://docs.astral.sh/ruff/) — 100-char line limit (configured in `pyproject.toml`)
 - **Naming**: `snake_case` for functions/variables, `PascalCase` for classes
-- **Docstrings**: on all modules and public functions
 - **Type hints**: where they improve readability
-- **Dependencies**: minimize. ChromaDB + PyYAML only. Don't add new deps without discussion.
+- **Dependencies**: minimize. Don't add new deps without discussion.
+
+## Design Principles
+
+These are non-negotiable. PRs that violate them will be declined.
+
+1. **Verbatim first** — Never summarize or extract from user content. Store exact words. The 96.6% score depends on this.
+
+2. **Local first** — Everything runs on the user's machine. No cloud dependencies. No data leaving the box.
+
+3. **Zero API by default** — Core features work without any API key. Period.
+
+4. **Trust weights** — Nothing reaches 0 or 1. All confidence and trust values are asymptotic (Brad's Balance). If you're adding a scoring mechanism, it must follow this principle.
+
+5. **Signal over noise** — Prefer coherence-weighted paths over exhaustive search. Quality of recall matters more than quantity.
 
 ## Good First Issues
 
-Check the [Issues](https://github.com/milla-jovovich/mempalace/issues) tab. Great starting points:
+Great places to start:
 
-- **New chat formats**: Add import support for Cursor, Copilot, or other AI tool exports
-- **Room detection**: Improve pattern matching in `room_detector_local.py`
-- **Tests**: Increase coverage — especially for `knowledge_graph.py` and `palace_graph.py`
-- **Entity detection**: Better name disambiguation in `entity_detector.py`
-- **Docs**: Improve examples, add tutorials
+- **Chat formats** — Add import support for Cursor, Copilot, Gemini, or other AI tool exports
+- **Room detection** — Improve semantic clustering in `room_detector_local.py`
+- **Test coverage** — Especially `knowledge_graph.py`, `palace_graph.py`, and `layers.py`
+- **Entity detection** — Better name disambiguation in `entity_detector.py`
+- **Signal notation** — Improve extraction quality in [zignal-notation](https://github.com/theBullfish/zignal-notation)
 
-## Architecture Decisions
+## Related Projects
 
-If you're planning a significant change, open an issue first to discuss the approach. Key principles:
-
-- **Verbatim first**: Never summarize user content. Store exact words.
-- **Local first**: Everything runs on the user's machine. No cloud dependencies.
-- **Zero API by default**: Core features must work without any API key.
-- **Palace structure matters**: Wings, halls, and rooms aren't cosmetic — they drive a 34% retrieval improvement. Respect the hierarchy.
-
-## Community
-
-- **Discord**: [Join us](https://discord.com/invite/ycTQQCu6kn)
-- **Issues**: Bug reports and feature requests welcome
-- **Discussions**: For questions and ideas
+- **[zignal-notation](https://github.com/theBullfish/zignal-notation)** — The signal-chain context format. Contributions welcome there too.
+- **[MemPalace](https://github.com/milla-jovovich/mempalace)** — The upstream project. If your contribution is to the raw retrieval engine, consider contributing upstream too.
 
 ## License
 
-MIT — your contributions will be released under the same license.
+MIT. Your contributions are released under the same license.

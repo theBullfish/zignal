@@ -706,12 +706,12 @@ def run_benchmark(
                 f"{len(sessions)} sessions, {len(corpus)} docs, {len(qa_pairs)} questions"
             )
 
-        tmpdir = tempfile.mkdtemp(prefix="mempal_locomo_")
+        tmpdir = tempfile.mkdtemp(prefix="zignal_locomo_")
         palace_path = os.path.join(tmpdir, "palace")
 
         try:
             client = chromadb.PersistentClient(path=palace_path)
-            collection = client.create_collection("mempal_drawers")
+            collection = client.create_collection("zignal_drawers")
 
             if mode == "aaak":
                 from zignal.dialect import Dialect
