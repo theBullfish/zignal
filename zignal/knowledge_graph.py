@@ -255,7 +255,7 @@ class KnowledgeGraph:
                         "direction": "outgoing",
                         "subject": name,
                         "predicate": row[2],
-                        "object": row[12],  # obj_name (shifted by new columns)
+                        "object": row[13],  # obj_name (shifted by new columns)
                         "valid_from": row[4],
                         "valid_to": row[5],
                         "confidence": row[6],
@@ -277,7 +277,7 @@ class KnowledgeGraph:
                 results.append(
                     {
                         "direction": "incoming",
-                        "subject": row[12],  # sub_name (shifted by new columns)
+                        "subject": row[13],  # sub_name (shifted by new columns)
                         "predicate": row[2],
                         "object": name,
                         "valid_from": row[4],
@@ -314,9 +314,9 @@ class KnowledgeGraph:
         for row in conn.execute(query, params).fetchall():
             results.append(
                 {
-                    "subject": row[10],
+                    "subject": row[13],
                     "predicate": pred,
-                    "object": row[11],
+                    "object": row[14],
                     "valid_from": row[4],
                     "valid_to": row[5],
                     "current": row[5] is None,
@@ -355,9 +355,9 @@ class KnowledgeGraph:
         conn.close()
         return [
             {
-                "subject": r[10],
+                "subject": r[13],
                 "predicate": r[2],
-                "object": r[11],
+                "object": r[14],
                 "valid_from": r[4],
                 "valid_to": r[5],
                 "current": r[5] is None,
