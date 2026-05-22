@@ -43,3 +43,36 @@ Surface choice locked: zignal drawer "lists". No code yet.
 ### Net result
 Scanner spec is concrete enough to implement.
 
+---
+
+## 2026-05-22 — L1.03–L1.10 batch retro
+
+### Artifacts
+- zignal/lists/{__init__,schema,walker,emit,cli}.py — 5 files, ~300 LOC
+- zignal-lists.{service,timer} on Temple, User=watchdog, 5-min cadence
+- /mnt/work/zignal/state/lists.json (canonical, 9 items at close)
+- /home/z13/.claude/projects/-home-z13/memory/UNFINISHED_LISTS.md (pushed via SSH)
+- MEMORY.md CRITICAL section line pointing at it
+- fusion/zignal_io/lists.py — ListsStatus read-only consumer
+
+### Doctrine adherence
+- One source of truth: PASS — all 4 surfaces show identical 9-item set.
+- Nothing on Z13 except source: PASS — scanner runs on Temple as
+  watchdog; only push to Z13 is the markdown memory file (data, not service).
+- Append-only: PASS — plan and notes only grew, no edits in place.
+- Flash means visible: PASS — Fusion ListsStatus.warn=True when count>0.
+
+### Open items (carried forward)
+1. fusion-v2/NOTES.md L37.10 [DOING] is now visible — Brad may want to
+   decide if it's a real DOING or a stale appendix that should be closed.
+2. Scanner excludes HuntDeckApp/hunt-deck per memory; verify no legitimate
+   Mirai/HuntDeckApp plans get hidden.
+3. Drawer dedup_threshold=0.99 — successive identical scans will still
+   file (content changes only when items change). Tune if palace bloats.
+
+### Net result
+Brad now sees a live unfinished-items panel in three places: zignal
+drawer wing=lists, Fusion zignal_io.ListsStatus, and his own MEMORY.md
+on every session start. Same JSON, no surface lies.
+
+

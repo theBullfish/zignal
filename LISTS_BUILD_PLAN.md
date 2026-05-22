@@ -118,10 +118,16 @@ L1.09 [PENDING] [RR+PRECEDE] One source of truth verification.
   Pre: L1.04 + L1.05 + L1.07 all done.
   Diff drawer / Fusion bridge / UNFINISHED_LISTS.md against lists.json.
   Confirm all three render identical row counts + IDs.
+L1.09 [DOING] 2026-05-22
+L1.09 [DONE]  2026-05-22 — all 4 surfaces (json+md+drawer+fusion) show
+  identical 9-item set with matching L#.## IDs.
 
 L1.10 [PENDING] [RR+PRECEDE] Commit + retro batch.
   Pre: L1.01–L1.09 closed.
   Commit message references the full L1.01–L1.10 range.
+L1.10 [DOING] 2026-05-22
+L1.10 [DONE]  2026-05-22 — zignal commit references L1.01-L1.10;
+  fusion commit references L1.05. Both repos clean.
 
 ---
 
@@ -129,3 +135,5 @@ L1.10 [PENDING] [RR+PRECEDE] Commit + retro batch.
 *(append-only — newest at bottom, dated)*
 
 2026-05-22 — plan drafted. L1.01–L1.10 PENDING.
+2026-05-22 — L1.01–L1.10 closed in single session. All 4 surfaces
+  verified at 9 items. Timer running every 5 min on Temple.
