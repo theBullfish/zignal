@@ -1,0 +1,10 @@
+[Unit]
+Description=Run zignal-lists scanner every 5 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+Unit=zignal-lists.service
+
+[Install]
+WantedBy=timers.target
