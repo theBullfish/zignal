@@ -17,9 +17,24 @@ from typing import Iterable
 from .schema import UnfinishedItem
 
 # Match either:
-#   "L22.05 [PENDING] ..."   (item declaration)
+#   "L22.05 [PENDING] ..."   (item declaration, ID first)
 #   "L22.05 [DOING] 2026-05-22 14:10"  (status appendix)
-ITEM_RE = re.compile(r"^\s*(L\d+(?:\.\d+)?[a-z]?)\s+\[([A-Z]+)\]")
+#   "- [PENDING] L22.05 ..." (bulleted list, status first — fusion-v2 form)
+# Capture order normalized to (id, status) regardless of input shape.
+_ITEM_ID_FIRST = re.compile(r"^\s*(L\d+(?:\.\d+)?[a-z]?)\s+\[([A-Z]+)\]")
+_ITEM_STATUS_FIRST = re.compile(
+    r"^\s*[-*]?\s*\[([A-Z]+)\]\s+(L\d+(?:\.\d+)?[a-z]?)"
+)
+
+
+def _match_item(line: str) -> tuple[str, str] | None:
+    m = _ITEM_ID_FIRST.match(line)
+    if m:
+        return m.group(1), m.group(2)
+    m = _ITEM_STATUS_FIRST.match(line)
+    if m:
+        return m.group(2), m.group(1)
+    return None
 
 OPEN = {"PENDING", "DOING", "BLOCKED", "PARTIAL"}
 CLOSED = {"DONE", "SKIPPED", "SUPERSEDED"}
@@ -55,10 +70,10 @@ def _parse_file(path: Path, host: str, today: dt.date) -> list[UnfinishedItem]:
     # First pass: collect every (id, status, line, date) appearance.
     appearances: dict[str, list[tuple[int, str, dt.date | None, str]]] = {}
     for i, ln in enumerate(lines, start=1):
-        m = ITEM_RE.match(ln)
-        if not m:
+        matched = _match_item(ln)
+        if not matched:
             continue
-        item_id, status = m.group(1), m.group(2)
+        item_id, status = matched
         date = _extract_date(ln)
         appearances.setdefault(item_id, []).append((i, status, date, ln.strip()))
 
@@ -112,15 +127,21 @@ def scan_local(roots: Iterable[Path], host: str,
 
 REMOTE_WALKER = r'''
 import os, re, json, sys, datetime as dt
-ITEM_RE = re.compile(r"^\s*(L\d+(?:\.\d+)?[a-z]?)\s+\[([A-Z]+)\]")
+ID_FIRST = re.compile(r"^\s*(L\d+(?:\.\d+)?[a-z]?)\s+\[([A-Z]+)\]")
+STATUS_FIRST = re.compile(r"^\s*[-*]?\s*\[([A-Z]+)\]\s+(L\d+(?:\.\d+)?[a-z]?)")
 DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 OPEN = {"PENDING","DOING","BLOCKED","PARTIAL"}
 EXCLUDE = {".git","node_modules","__pycache__",".venv","venv",
            "HuntDeckApp","hunt-deck",".cache","target","dist"}
-PATS = ("BUILD_PLAN.md","NOTES.md","_BUILD_PLAN.md","_NOTES.md")
 today = dt.date.today()
 def match(n):
     return n in ("BUILD_PLAN.md","NOTES.md") or n.endswith("_BUILD_PLAN.md") or n.endswith("_NOTES.md")
+def parse_item(ln):
+    m = ID_FIRST.match(ln)
+    if m: return m.group(1), m.group(2)
+    m = STATUS_FIRST.match(ln)
+    if m: return m.group(2), m.group(1)
+    return None
 out = []
 for root in sys.argv[1:]:
     if not os.path.isdir(root): continue
@@ -135,9 +156,9 @@ for root in sys.argv[1:]:
                 continue
             apps = {}
             for i, ln in enumerate(txt.splitlines(), 1):
-                m = ITEM_RE.match(ln)
-                if not m: continue
-                iid, st = m.group(1), m.group(2)
+                pi = parse_item(ln)
+                if not pi: continue
+                iid, st = pi
                 dm = DATE_RE.search(ln)
                 d = None
                 if dm:

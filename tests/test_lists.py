@@ -38,6 +38,22 @@ def test_open_set_includes_partial():
     assert "SKIPPED" not in OPEN
 
 
+def test_parse_file_status_first_format(tmp_path: Path):
+    """Bulleted '- [STATUS] L#.##' (fusion-v2 form) must surface."""
+    plan = tmp_path / "BUILD_PLAN.md"
+    plan.write_text(
+        "- [PENDING] L39.10a — Wire 4 remaining OCSP ops\n"
+        "- [PENDING] L39.11a — Wire 3 remaining JAR ops\n"
+        "- [DONE] L0.01 closed item\n"
+    )
+    import datetime as dt
+    items = _parse_file(plan, host="temple", today=dt.date(2026, 5, 22))
+    ids = {(i.item_id, i.status) for i in items}
+    assert ("L39.10a", "PENDING") in ids
+    assert ("L39.11a", "PENDING") in ids
+    assert ("L0.01", "DONE") not in ids  # closed, not surfaced
+
+
 def test_parse_file_picks_up_partial(tmp_path: Path):
     plan = tmp_path / "BUILD_PLAN.md"
     plan.write_text(
