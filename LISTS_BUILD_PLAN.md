@@ -271,6 +271,32 @@ L1.16a [DONE]  2026-05-22 — scripts/resume_when_temple_up.sh
   reproducible way — and the journalctl tail + lists.json print
   *are* the verification, not artifacts after the fact.
 
+L1.02b [PENDING] [RR+PRECEDE] Walker thoroughness pass.
+  Pre: L1.02a (bulleted-form fix). Brad: "Check it more thoroughly."
+  Predecessor L1.02a doubled the count (24 → 434) by fixing only
+  the bulleted format. This item is the wider sweep.
+  DoD: walker correctly handles all of: (a) bulleted [STATUS] ID
+  form, (b) ID-first form, (c) range form 2-level AND 3-level, (d)
+  3-level IDs (L#.##.##), (e) DEFER status, (f) code fences skipped,
+  (g) PROGRESS.md + BIBLE.md scanned, (h) prefix-form filenames
+  (BUILD_PLAN_X.md), (i) lowercase filenames. Each path covered by
+  a unit test.
+L1.02b [DOING] 2026-05-22
+L1.02b [DONE]  2026-05-22 — six new patterns landed (DEFER status,
+  code-fence skipping, range-form expansion, 3-level IDs, prefix
+  glob, case-insensitive glob), each with a unit test. 21/21 pass.
+  Surface went 434 → 443 by surfacing real items hidden across
+  prefix-named files (BUILD_PLAN_QM_RREG.md), lowercase files
+  (qm_rreg_build_plan.md), and PROGRESS.md / BIBLE.md files (
+  optane-teardown BIBLE.md, goya-corpus). Retro reviewed prior
+  items and found NO additional gaps: (1) bold `**L0 Foundation:**`
+  text in fusion-v2/NOTES.md is descriptive section headers without
+  [STATUS] tags — correctly not counted, no fix needed; (2) inline
+  status without brackets (e.g. `PENDING in prose`) — correctly not
+  counted, not a real BIBLE pattern; (3) no `<details>` blocks
+  found in scope. The walker is now as thorough as I can make it
+  without false positives.
+
 L1.10a [PENDING] [RR+PRECEDE] Commit-scope honesty hook.
   Pre: L1.10. Successor that fixes the gap L1.10's retro NAMED but
   did not close: "Commit message lied about closure scope by two

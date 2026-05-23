@@ -70,6 +70,116 @@ def test_parse_file_picks_up_partial(tmp_path: Path):
     assert ("L1.02", "DONE") not in ids  # DONE does not
 
 
+def test_parse_file_skips_code_fence(tmp_path: Path):
+    """Items inside ```code fences``` are format examples, not real items."""
+    plan = tmp_path / "BUILD_PLAN.md"
+    plan.write_text(
+        "L1.01 [PENDING] real item\n"
+        "```\n"
+        "L99.99 [PENDING] example shown in a code block\n"
+        "```\n"
+        "L1.02 [DOING] another real item\n"
+    )
+    import datetime as dt
+    items = _parse_file(plan, host="z13", today=dt.date(2026, 5, 22))
+    ids = {i.item_id for i in items}
+    assert "L1.01" in ids
+    assert "L1.02" in ids
+    assert "L99.99" not in ids  # filtered out — was in code fence
+
+
+def test_parse_file_expands_range(tmp_path: Path):
+    """L45.01-L45.05 [DONE] closes 5 items."""
+    plan = tmp_path / "PROGRESS.md"
+    plan.write_text(
+        "L45.01 [PENDING] item one\n"
+        "L45.02 [PENDING] item two\n"
+        "L45.03 [PENDING] item three\n"
+        "L45.04 [PENDING] item four\n"
+        "L45.05 [PENDING] item five\n"
+        "L45.01-L45.05 [DONE] 2026-05-22 — all closed\n"
+    )
+    import datetime as dt
+    items = _parse_file(plan, host="temple", today=dt.date(2026, 5, 22))
+    # All 5 should resolve to DONE (closed), so none surface as open.
+    assert items == []
+
+
+def test_parse_file_three_level_ids(tmp_path: Path):
+    """L39.18.04 must NOT collapse to L39 — three-level IDs are real."""
+    plan = tmp_path / "BUILD_PLAN.md"
+    plan.write_text(
+        "L39.18.04 [PENDING] sub-item\n"
+        "L39.18.05 [PENDING] another sub-item\n"
+        "L39 [DONE] 2026-05-22 — layer close (different ID)\n"
+    )
+    import datetime as dt
+    items = _parse_file(plan, host="temple", today=dt.date(2026, 5, 22))
+    ids = {i.item_id for i in items}
+    assert "L39.18.04" in ids
+    assert "L39.18.05" in ids
+    assert "L39" not in ids  # closed separately, not merged with the others
+
+
+def test_range_expand_three_level(tmp_path: Path):
+    """L39.16.02-L39.16.05 [DONE] closes 4 sub-items."""
+    plan = tmp_path / "PROGRESS.md"
+    plan.write_text(
+        "L39.16.02 [PENDING] x\n"
+        "L39.16.03 [PENDING] x\n"
+        "L39.16.04 [PENDING] x\n"
+        "L39.16.05 [PENDING] x\n"
+        "L39.16.02-L39.16.05 [DONE] 2026-05-22 — batch close\n"
+    )
+    import datetime as dt
+    items = _parse_file(plan, host="temple", today=dt.date(2026, 5, 22))
+    assert items == []
+
+
+def test_parse_file_picks_up_defer(tmp_path: Path):
+    """DEFER is owed work; must surface."""
+    plan = tmp_path / "NOTES.md"
+    plan.write_text("L1.01 [DEFER] waiting on PSU cycle\n")
+    import datetime as dt
+    items = _parse_file(plan, host="z13", today=dt.date(2026, 5, 22))
+    assert any(i.item_id == "L1.01" and i.status == "DEFER" for i in items)
+
+
+def test_find_plan_files_finds_progress_and_bible(tmp_path: Path):
+    """PROGRESS.md, BIBLE.md, and both prefix/suffix forms must be found."""
+    for name in ("BUILD_PLAN.md", "NOTES.md", "PROGRESS.md", "BIBLE.md",
+                "PIPELINE_BUILD_PLAN.md",        # suffix form
+                "BUILD_PLAN_QM_RREG.md",         # prefix form
+                "NOTES_session_22.md",
+                "BIBLE_optane.md"):
+        (tmp_path / name).write_text("L1.01 [PENDING] x\n")
+    (tmp_path / "README.md").write_text("not a plan\n")
+    # RELEASE_NOTES.md DOES match the *_NOTES.md glob — globs are
+    # intentionally broad; the content filter (no L#.## items in a
+    # release-notes file) is what keeps these from showing up in the
+    # scanner output.
+    (tmp_path / "RELEASE_NOTES.md").write_text(
+        "## v1.2.3\nbug fixes\n"  # no BIBLE items → won't surface
+    )
+    from zignal.lists.walker import _find_plan_files, scan_local
+    found = {p.name for p in _find_plan_files(tmp_path)}
+    # Add a lowercase variant — goya-corpus uses lowercase filenames.
+    (tmp_path / "qm_rreg_build_plan.md").write_text("L1.01 [PENDING] x\n")
+    found = {p.name for p in _find_plan_files(tmp_path)}
+    for required in ("BUILD_PLAN.md", "NOTES.md", "PROGRESS.md", "BIBLE.md",
+                     "PIPELINE_BUILD_PLAN.md", "BUILD_PLAN_QM_RREG.md",
+                     "NOTES_session_22.md", "BIBLE_optane.md",
+                     "qm_rreg_build_plan.md"):
+        assert required in found, f"{required} not picked up by globs"
+    assert "README.md" not in found
+    # RELEASE_NOTES.md is globbed but has zero BIBLE items, so
+    # scan_local should not surface anything from it.
+    items = scan_local([tmp_path], host="z13")
+    by_path = {(it.source_path) for it in items}
+    assert all("RELEASE_NOTES.md" not in p for p in by_path), \
+        "release notes leaked an item"
+
+
 def test_remote_z13_unreachable_returns_status():
     # ssh to a target that won't auth in BatchMode within 5s
     items, status = scan_remote_z13(

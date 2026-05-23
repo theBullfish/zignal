@@ -21,9 +21,9 @@ from .schema import UnfinishedItem
 #   "L22.05 [DOING] 2026-05-22 14:10"  (status appendix)
 #   "- [PENDING] L22.05 ..." (bulleted list, status first — fusion-v2 form)
 # Capture order normalized to (id, status) regardless of input shape.
-_ITEM_ID_FIRST = re.compile(r"^\s*(L\d+(?:\.\d+)?[a-z]?)\s+\[([A-Z]+)\]")
+_ITEM_ID_FIRST = re.compile(r"^\s*(L\d+(?:\.\d+)*[a-z]?)\s+\[([A-Z]+)\]")
 _ITEM_STATUS_FIRST = re.compile(
-    r"^\s*[-*]?\s*\[([A-Z]+)\]\s+(L\d+(?:\.\d+)?[a-z]?)"
+    r"^\s*[-*]?\s*\[([A-Z]+)\]\s+(L\d+(?:\.\d+)*[a-z]?)"
 )
 
 
@@ -36,10 +36,14 @@ def _match_item(line: str) -> tuple[str, str] | None:
         return m.group(2), m.group(1)
     return None
 
-OPEN = {"PENDING", "DOING", "BLOCKED", "PARTIAL"}
+OPEN = {"PENDING", "DOING", "BLOCKED", "PARTIAL", "DEFER", "DEFERRED"}
 CLOSED = {"DONE", "SKIPPED", "SUPERSEDED"}
 
-PLAN_GLOBS = ("BUILD_PLAN.md", "NOTES.md", "*_BUILD_PLAN.md", "*_NOTES.md")
+PLAN_GLOBS = (
+    "BUILD_PLAN.md", "NOTES.md", "PROGRESS.md", "BIBLE.md",
+    "BUILD_PLAN_*.md", "NOTES_*.md", "PROGRESS_*.md", "BIBLE_*.md",
+    "*_BUILD_PLAN.md", "*_NOTES.md", "*_PROGRESS.md", "*_BIBLE.md",
+)
 EXCLUDE_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv",
                 "HuntDeckApp", "hunt-deck", ".cache", "target", "dist"}
 
@@ -55,9 +59,41 @@ def _find_plan_files(root: Path) -> list[Path]:
 
 
 def _match(name: str, pattern: str) -> bool:
-    if pattern.startswith("*"):
-        return name.endswith(pattern[1:])
-    return name == pattern
+    """Glob match supporting prefix (`X_*.md`), suffix (`*_X.md`),
+    and exact patterns. Case-insensitive — goya-corpus uses
+    lowercase build_plan filenames."""
+    import fnmatch
+    return fnmatch.fnmatchcase(name.upper(), pattern.upper())
+
+
+# Range form: "L45.01-L45.05 [DONE] ..." closes 5 items in one line.
+_RANGE_RE = re.compile(
+    r"^\s*[-*]?\s*"
+    r"(L\d+(?:\.\d+)+)\s*[-–—]\s*(L\d+(?:\.\d+)+)\s+\[([A-Z]+)\]"
+)
+
+
+def _expand_range(start_id: str, end_id: str) -> list[str]:
+    """Expand "L45.01-L45.05" -> 5 ids; "L39.16.02-L39.16.03" -> 2.
+    Returns [] if the range can't be expanded safely (different
+    prefixes, descending, or >50)."""
+    try:
+        s_parts = start_id[1:].split(".")
+        e_parts = end_id[1:].split(".")
+        if len(s_parts) != len(e_parts):
+            return []
+        # Only the last component may differ.
+        if s_parts[:-1] != e_parts[:-1]:
+            return []
+        s_n, e_n = int(s_parts[-1]), int(e_parts[-1])
+        if e_n < s_n or e_n - s_n > 50:
+            return []
+        prefix = ".".join(s_parts[:-1])
+        width = max(len(s_parts[-1]), len(e_parts[-1]))
+        return [f"L{prefix}.{str(n).zfill(width)}"
+                for n in range(s_n, e_n + 1)]
+    except (ValueError, IndexError):
+        return []
 
 
 def _parse_file(path: Path, host: str, today: dt.date) -> list[UnfinishedItem]:
@@ -68,13 +104,31 @@ def _parse_file(path: Path, host: str, today: dt.date) -> list[UnfinishedItem]:
     lines = text.splitlines()
 
     # First pass: collect every (id, status, line, date) appearance.
+    # Skip lines inside ```code fences``` — those are format examples,
+    # not real plan items.
     appearances: dict[str, list[tuple[int, str, dt.date | None, str]]] = {}
+    in_fence = False
     for i, ln in enumerate(lines, start=1):
+        stripped = ln.lstrip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        date = _extract_date(ln)
+        # Try range form first (closes multiple items in one line).
+        rm = _RANGE_RE.match(ln)
+        if rm:
+            start_id, end_id, status = rm.group(1), rm.group(2), rm.group(3)
+            for iid in _expand_range(start_id, end_id):
+                appearances.setdefault(iid, []).append(
+                    (i, status, date, ln.strip())
+                )
+            continue
         matched = _match_item(ln)
         if not matched:
             continue
         item_id, status = matched
-        date = _extract_date(ln)
         appearances.setdefault(item_id, []).append((i, status, date, ln.strip()))
 
     out: list[UnfinishedItem] = []
@@ -127,21 +181,37 @@ def scan_local(roots: Iterable[Path], host: str,
 
 REMOTE_WALKER = r'''
 import os, re, json, sys, datetime as dt
-ID_FIRST = re.compile(r"^\s*(L\d+(?:\.\d+)?[a-z]?)\s+\[([A-Z]+)\]")
-STATUS_FIRST = re.compile(r"^\s*[-*]?\s*\[([A-Z]+)\]\s+(L\d+(?:\.\d+)?[a-z]?)")
+ID_FIRST = re.compile(r"^\s*(L\d+(?:\.\d+)*[a-z]?)\s+\[([A-Z]+)\]")
+STATUS_FIRST = re.compile(r"^\s*[-*]?\s*\[([A-Z]+)\]\s+(L\d+(?:\.\d+)*[a-z]?)")
+RANGE = re.compile(r"^\s*[-*]?\s*(L\d+(?:\.\d+)+)\s*[-–—]\s*(L\d+(?:\.\d+)+)\s+\[([A-Z]+)\]")
 DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
-OPEN = {"PENDING","DOING","BLOCKED","PARTIAL"}
+OPEN = {"PENDING","DOING","BLOCKED","PARTIAL","DEFER","DEFERRED"}
 EXCLUDE = {".git","node_modules","__pycache__",".venv","venv",
            "HuntDeckApp","hunt-deck",".cache","target","dist"}
 today = dt.date.today()
+import fnmatch as _fnmatch
+GLOBS = ("BUILD_PLAN.md","NOTES.md","PROGRESS.md","BIBLE.md",
+         "BUILD_PLAN_*.md","NOTES_*.md","PROGRESS_*.md","BIBLE_*.md",
+         "*_BUILD_PLAN.md","*_NOTES.md","*_PROGRESS.md","*_BIBLE.md")
 def match(n):
-    return n in ("BUILD_PLAN.md","NOTES.md") or n.endswith("_BUILD_PLAN.md") or n.endswith("_NOTES.md")
+    nu = n.upper()
+    return any(_fnmatch.fnmatchcase(nu, g.upper()) for g in GLOBS)
 def parse_item(ln):
     m = ID_FIRST.match(ln)
     if m: return m.group(1), m.group(2)
     m = STATUS_FIRST.match(ln)
     if m: return m.group(2), m.group(1)
     return None
+def expand_range(s, e):
+    try:
+        sp = s[1:].split("."); ep = e[1:].split(".")
+        if len(sp) != len(ep) or sp[:-1] != ep[:-1]: return []
+        si, ei = int(sp[-1]), int(ep[-1])
+        if ei < si or ei - si > 50: return []
+        w = max(len(sp[-1]), len(ep[-1]))
+        pref = ".".join(sp[:-1])
+        return ["L%s.%s" % (pref, str(n).zfill(w)) for n in range(si, ei+1)]
+    except: return []
 out = []
 for root in sys.argv[1:]:
     if not os.path.isdir(root): continue
@@ -155,15 +225,23 @@ for root in sys.argv[1:]:
             except OSError:
                 continue
             apps = {}
+            in_fence = False
             for i, ln in enumerate(txt.splitlines(), 1):
-                pi = parse_item(ln)
-                if not pi: continue
-                iid, st = pi
-                dm = DATE_RE.search(ln)
-                d = None
+                if ln.lstrip().startswith("```"):
+                    in_fence = not in_fence; continue
+                if in_fence: continue
+                dm = DATE_RE.search(ln); d = None
                 if dm:
                     try: d = dt.date(int(dm.group(1)),int(dm.group(2)),int(dm.group(3)))
                     except: pass
+                rm = RANGE.match(ln)
+                if rm:
+                    for iid in expand_range(rm.group(1), rm.group(2)):
+                        apps.setdefault(iid, []).append((i, rm.group(3), d, ln.strip()))
+                    continue
+                pi = parse_item(ln)
+                if not pi: continue
+                iid, st = pi
                 apps.setdefault(iid, []).append((i, st, d, ln.strip()))
             for iid, es in apps.items():
                 if es[-1][1] not in OPEN: continue
