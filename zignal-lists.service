@@ -8,5 +8,7 @@ User=watchdog
 WorkingDirectory=/mnt/work/zignal
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/bin/python3 -m zignal.lists.cli
+TimeoutStartSec=120
+TimeoutStopSec=30
 StandardOutput=journal
 StandardError=journal

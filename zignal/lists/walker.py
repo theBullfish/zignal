@@ -21,7 +21,7 @@ from .schema import UnfinishedItem
 #   "L22.05 [DOING] 2026-05-22 14:10"  (status appendix)
 ITEM_RE = re.compile(r"^\s*(L\d+(?:\.\d+)?[a-z]?)\s+\[([A-Z]+)\]")
 
-OPEN = {"PENDING", "DOING", "BLOCKED"}
+OPEN = {"PENDING", "DOING", "BLOCKED", "PARTIAL"}
 CLOSED = {"DONE", "SKIPPED", "SUPERSEDED"}
 
 PLAN_GLOBS = ("BUILD_PLAN.md", "NOTES.md", "*_BUILD_PLAN.md", "*_NOTES.md")
@@ -114,7 +114,7 @@ REMOTE_WALKER = r'''
 import os, re, json, sys, datetime as dt
 ITEM_RE = re.compile(r"^\s*(L\d+(?:\.\d+)?[a-z]?)\s+\[([A-Z]+)\]")
 DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
-OPEN = {"PENDING","DOING","BLOCKED"}
+OPEN = {"PENDING","DOING","BLOCKED","PARTIAL"}
 EXCLUDE = {".git","node_modules","__pycache__",".venv","venv",
            "HuntDeckApp","hunt-deck",".cache","target","dist"}
 PATS = ("BUILD_PLAN.md","NOTES.md","_BUILD_PLAN.md","_NOTES.md")
@@ -156,7 +156,12 @@ print(json.dumps(out))
 
 
 def scan_remote_z13(roots: Iterable[str],
-                    ssh_target: str = "z13@100.106.69.123") -> list[UnfinishedItem]:
+                    ssh_target: str = "z13@100.106.69.123"
+                    ) -> tuple[list[UnfinishedItem], str]:
+    """Returns (items, status). status: 'ok' | 'ssh_timeout' |
+    'ssh_failed' | 'parse_failed'. Empty items + 'ok' means Z13 has
+    no open items; empty items + non-'ok' means we could not see Z13.
+    Surfaces must distinguish these two cases."""
     args = " ".join(f"'{r}'" for r in roots)
     cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
            ssh_target, f"python3 - {args}"]
@@ -164,11 +169,11 @@ def scan_remote_z13(roots: Iterable[str],
         proc = subprocess.run(cmd, input=REMOTE_WALKER, capture_output=True,
                               text=True, timeout=120)
     except subprocess.TimeoutExpired:
-        return []
+        return [], "ssh_timeout"
     if proc.returncode != 0:
-        return []
+        return [], "ssh_failed"
     try:
         data = json.loads(proc.stdout)
     except json.JSONDecodeError:
-        return []
-    return [UnfinishedItem(**row) for row in data]
+        return [], "parse_failed"
+    return [UnfinishedItem(**row) for row in data], "ok"

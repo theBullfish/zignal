@@ -26,12 +26,18 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     items = scan_local([Path(p) for p in args.temple_roots], host="temple")
+    remote_status: dict[str, str] = {}
     if not args.no_z13:
-        items.extend(scan_remote_z13(args.z13_roots))
+        z13_items, z13_status = scan_remote_z13(args.z13_roots)
+        items.extend(z13_items)
+        remote_status["z13"] = z13_status
+    else:
+        remote_status["z13"] = "skipped"
 
-    summary = _payload(items)
+    summary = _payload(items, remote_status)
     print(f"[lists] {summary['count']} open items, "
-          f"oldest {summary['oldest_age_days']} days")
+          f"oldest {summary['oldest_age_days']} days  "
+          f"remote={remote_status}")
 
     if args.dry_run:
         for it in summary["items"][:10]:
@@ -39,9 +45,9 @@ def main(argv: list[str] | None = None) -> int:
                   f"{it['item_id']:<10}  {it['host']}:{it['source_path']}:{it['line']}")
         return 0
 
-    result = emit_all(items)
+    result = emit_all(items, remote_status)
     print(f"[lists] json={result['json_path']} "
-          f"z13_pushed={result['z13_memory_pushed']}")
+          f"emit_status={result['emit_status']}")
     return 0
 
 
