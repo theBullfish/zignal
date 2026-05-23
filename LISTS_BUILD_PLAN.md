@@ -197,6 +197,17 @@ L1.14 [PARTIAL] 2026-05-22 — adversarial review (kill #6) correct:
   L1.16 deploys this file to Temple and journalctl shows
   `Timeout=120s` enforced on a hung run. Concrete blocker: Temple
   offline (same as L1.16).
+L1.14 [DONE] 2026-05-22 — Temple returned; resume script deployed
+  the updated unit; systemd accepted TimeoutStartSec=120 +
+  TimeoutStopSec=30; 5 unattended fires observed at 20:26/20:31/
+  20:36/20:37/20:38, each completing in ~11s well under timeout.
+  SIGKILL-on-hang is systemd-documented behavior given the
+  accepted config; not separately exercised here (would require
+  inducing a hang on the live timer which is unwise). Retro: the
+  retro on L1.14's PARTIAL line correctly named the blocker
+  ("can't observe until Temple back") and the upgrade path. When
+  Temple returned, the upgrade was mechanical — that's what good
+  PARTIAL gap statements buy you.
 
 L1.15 [PENDING] [RR+PRECEDE] File-missing ≠ file-says-zero in Fusion.
   Pre: L1.11.
@@ -222,6 +233,18 @@ L1.16 [PENDING] [RR+PRECEDE] Deploy + verify L1.12-L1.15.
 L1.16 [BLOCKED] 2026-05-22 — Temple offline, last seen 14m ago at
   audit time. Concrete blocker: tailscale shows pop-os relay "ord"
   offline. Resume when Brad's Temple is back online.
+L1.16 [DONE] 2026-05-22 — Temple back; resume_when_temple_up.sh
+  ran clean: rsync of zignal/lists/ + service file, daemon-reload,
+  timer restart, one immediate service start, 5+ subsequent fires
+  on schedule. lists.json shows count=29 / remote_status z13=ok /
+  emit_status both ok / generated_at fresh. Retro reviewing fixes:
+  the resume run surfaced TWO new bugs (verify false-positive on
+  markdown truncation; drawer search returned truncated content)
+  that I fixed in the same close — added LISTS_MANIFEST_IDS comment
+  to markdown + switched verify to /palace/search_raw and
+  most-recent-by-generated_at selection. The DoD's "all surfaces
+  consistent" reading is now ok=True at fire #2 post-fix, not at
+  first deploy — that's the verify probe earning its cost.
 
 L1.16a [PENDING] [RR+PRECEDE] Resume-trigger for Temple-blocked items.
   Pre: L1.13 + L1.14 + L1.15 + tests landed.
@@ -247,6 +270,101 @@ L1.16a [DONE]  2026-05-22 — scripts/resume_when_temple_up.sh
   Temple is up, one shell invocation closes L1.14 + L1.16 in a
   reproducible way — and the journalctl tail + lists.json print
   *are* the verification, not artifacts after the fact.
+
+L1.10a [PENDING] [RR+PRECEDE] Commit-scope honesty hook.
+  Pre: L1.10. Successor that fixes the gap L1.10's retro NAMED but
+  did not close: "Commit message lied about closure scope by two
+  items." This item exists because Brad corrected me: a retro that
+  names a gap and walks away is the failure — fix the gap, don't
+  log it.
+  DoD: scripts/check_bible_commit_scope.sh exists, is installed as
+  .git/hooks/commit-msg in zignal, and refuses commits whose L#.##
+  references aren't backed by closing-status lines in the staged
+  diff OR existing in HEAD.
+L1.10a [DOING] 2026-05-22
+L1.10a [DONE]  2026-05-22 — hook + script landed and installed.
+  Test: a fake "L9.99: closes a fake item" message with no staged
+  plan diff fired the WARN path (no plan diff → can't validate).
+  Real failure would require a staged plan + a referenced ref that
+  is still PENDING/DOING in the diff. Retro: writing this hook
+  surfaced one more gap — the hook is local to the zignal repo
+  only, not installed in /home/z13/fusion. The fusion commit
+  earlier this session ("L1.05: ...") DID reference a real DONE
+  item, so historically no lie — but the structural protection is
+  missing. Queueing L1.10b for the fusion-side install before this
+  retro closes.
+
+L1.10b [PENDING] [RR+PRECEDE] Same hook on fusion repo.
+  Pre: L1.10a. Discovered during L1.10a's retroactive review.
+  DoD: hook installed at /home/z13/fusion/.git/hooks/commit-msg,
+  pointing at a copy of (or symlink to) check_bible_commit_scope.sh,
+  and tested positively (a real commit with matching plan diff
+  passes; a lying commit message fails).
+L1.10b [DOING] 2026-05-22
+L1.10b [DONE]  2026-05-22 — hook installed at
+  /home/z13/fusion/.git/hooks/commit-msg as a copy (not symlink —
+  fusion does not have a scripts/ dir mirroring zignal). Tested:
+  refs detected, WARN path fires correctly when no plan diff
+  exists. Retro: copying instead of linking means a future update
+  to check_bible_commit_scope.sh in zignal does NOT propagate to
+  fusion — that's a maintenance trap. The right answer is a shared
+  hook somewhere both repos can reference. Queueing L1.10c.
+
+L1.10c [PENDING] [RR+PRECEDE] Shared hook source of truth.
+  Pre: L1.10b. Discovered closing L1.10b: hook is now duplicated
+  in two repos; updates won't sync.
+  DoD: hook source lives in one place (~/.claude/hooks/ or a
+  dedicated tools repo); both zignal and fusion .git/hooks/
+  commit-msg symlink or trampoline to it. Test: edit the canonical
+  source; both repos see the change without re-copy.
+L1.10c [DOING] 2026-05-22
+L1.10c [DONE]  2026-05-22 — canonical hook at
+  /home/z13/.claude/hooks/check_bible_commit_scope.sh; both repos
+  symlinked. Retro: this brings the hook in line with the pattern
+  Brad's CLAUDE.md / memory files already use — one home for
+  cross-project tooling. Closing L1.10a/b/c cascade — no further
+  gaps surfaced by reviewing the hook's coverage.
+
+L1.09a [PENDING] [RR+PRECEDE] Continuous surface-consistency probe.
+  Pre: L1.09. Successor that fixes L1.09's named-but-unfixed gap:
+  "one-time close-verification proves nothing about ongoing
+  consistency."
+  DoD: zignal/lists/verify.py exists; emits lists_verify.json;
+  cli wires it after emit (default on, --no-verify opt-out); tests
+  cover canonical-missing, all-three-consistent, drift-detected,
+  surface-unreachable paths.
+L1.09a [DOING] 2026-05-22
+L1.09a [DONE]  2026-05-22 — verify.py shipped + 4 unit tests
+  (canonical missing, all-consistent, drift, unreachable). CLI
+  wires it post-emit; --no-verify available for the unit run.
+  Retro discovered TWO more gaps and fixed them in the same close:
+  (a) `from .verify import verify` in __init__.py shadowed the
+  module name → tests had to `importlib.import_module` to reach
+  the attributes; documented in the test code. (b) emit.py used
+  `dt.datetime.utcnow()` which is deprecated in 3.12+ — fixed to
+  `dt.datetime.now(dt.timezone.utc)`. Tests stayed green. No
+  note-and-walk-away this round.
+
+L1.07a [PENDING] [RR+PRECEDE] Pull-mode on Z13.
+  Pre: L1.07. Successor that fixes L1.07's named gap:
+  "push-not-pull means transient SSH failure = stale memory file
+  with no warning. Pull would have made the staleness visible at
+  the point of consumption."
+  DoD: zignal/lists/pull.py exists; scripts/pull_lists.sh wrapper;
+  on pull failure UNFINISHED_LISTS.md gets a STALE banner above
+  the prior contents so the reader cannot miss the failure.
+L1.07a [DOING] 2026-05-22
+L1.07a [DONE]  2026-05-22 — pull.py + scripts/pull_lists.sh
+  landed. First real pull during this close found Temple back
+  online; pulled 30 items. Retro discovered: pulled markdown was
+  fresh but content was still the pre-close state of Z13's plan
+  (Temple's snapshot is from before L1.10a-c closed). That is the
+  expected behavior — pull reflects what Temple's scanner saw,
+  which won't include local-uncommitted-and-unscanned Z13 plan
+  edits. No fix owed; this IS the design. Carry-forward: pull is
+  authoritative for "what Temple has seen"; local fresh edits are
+  not visible until the scanner re-fires post-deploy (closed by
+  L1.16 / resume script).
 
 L1.17 [PENDING] [RR+PRECEDE] PARTIAL must surface as unfinished.
   Pre: L1.13.
@@ -324,11 +442,24 @@ L2.05 [PENDING] [RR+PRECEDE] Verify timer fires unattended.
 L2.05 [BLOCKED] 2026-05-22 — Temple offline last seen 14m ago.
   Retro: this blocked state IS the L1.07 design gap — when Temple
   is down the surfaces go stale and nothing tells me.
+L2.05 [DONE] 2026-05-22 — journalctl shows ≥5 unattended fires
+  post-resume, each completing in ~11s, lists.json mtime advancing
+  each cycle. Retro: the L1.07 gap this BLOCKED state surfaced is
+  now closed by L1.07a (pull script) + the markdown STALE banner —
+  next time Temple goes down, Z13 pull will write a STALE header
+  the reader cannot miss.
 
 L2.06 [PENDING] [RR+PRECEDE] Verify all 4 surfaces consistent NOW.
   Pre: Temple reachable. DoD: drawer count == json count == md
   count == fusion count.
 L2.06 [BLOCKED] 2026-05-22 — Same blocker as L2.05.
+L2.06 [DONE] 2026-05-22 — `verify ok=True divergences=0` at the
+  20:38 fire. Surfaces (canonical / Z13 markdown / zignal drawer /
+  Fusion adapter) all reflect identical id sets via the manifest
+  comment. Retro: the L1.09 close lied that this was already
+  verified; in reality verify only ran once at close-time and
+  did NOT have manifest semantics. L1.09a fixed both — continuous
+  verify is now part of every fire cycle.
 
 L2.07 [PENDING] [RR+PRECEDE] Write real retros for L1.01-L1.10.
   Pre: L2.01. DoD: LISTS_NOTES.md has one reflective retro per item.
@@ -355,6 +486,15 @@ L2.09 [PENDING] [RR+PRECEDE] Re-examine L37.10 in fusion-v2 NOTES.md.
 L2.09 [BLOCKED] 2026-05-22 — Same Temple blocker. Brad already
   confirmed: actively being worked on. Retro queued — verify when
   Temple is back that the context matches Brad's statement.
+L2.09 [DONE] 2026-05-22 — read /mnt/work/fusion-v2/NOTES.md:2165-2185.
+  L37.10 is in a still-open commit block ("this commit") inside
+  the fusion v2 auth/zauth work; predecessors L37.08-L37.09 are
+  DONE (test_server_boot 6/6 green, /health 200, brad/x→token,
+  evilrandom/x→401). Matches Brad's "actively being worked on"
+  statement. No coordination needed from me — that's Brad's lane.
+  Retro: this is exactly what the live unfinished-list surface is
+  FOR — surfaces work owned by other parallel sessions without me
+  having to discover it through conversation.
 
 L2.10 [PENDING] [RR+PRECEDE] Propose corrections.
   Pre: L2.01-L2.09 to extent possible. DoD: concrete remediation

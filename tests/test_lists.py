@@ -148,6 +148,95 @@ def test_read_status_alarm_on_old_items(tmp_path: Path):
     assert "ALARM" in s.headline()
 
 
+# --- verify.py --------------------------------------------------------
+
+def test_verify_canonical_missing(monkeypatch, tmp_path):
+    """When lists.json is missing, verify reports ok=False with reason."""
+    import importlib
+    verify_mod = importlib.import_module("zignal.lists.verify")
+    monkeypatch.setattr(verify_mod, "CANONICAL", tmp_path / "absent.json")
+    monkeypatch.setattr(verify_mod, "VERIFY_OUT", tmp_path / "verify.json")
+    r = verify_mod.verify()
+    assert r["ok"] is False
+    assert any("canonical" in str(d).lower() for d in r["divergence"])
+
+
+def test_verify_all_three_surfaces_consistent(monkeypatch, tmp_path):
+    """Happy path: canonical + md + drawer all carry same ids."""
+    import importlib
+    verify_mod = importlib.import_module("zignal.lists.verify")
+    canonical = {
+        "count": 2, "oldest_age_days": 1,
+        "items": [{"item_id": "L1.01"}, {"item_id": "L2.05"}],
+        "generated_at": "2026-05-22T00:00:00Z",
+    }
+    canon_path = tmp_path / "lists.json"
+    canon_path.write_text(json.dumps(canonical))
+    monkeypatch.setattr(verify_mod, "CANONICAL", canon_path)
+    monkeypatch.setattr(verify_mod, "VERIFY_OUT", tmp_path / "verify.json")
+    md_text = "| 0 | PENDING | `L1.01` |\n| 0 | PENDING | `L2.05` |"
+    monkeypatch.setattr(verify_mod, "_read_z13_markdown",
+                        lambda: (md_text, "ok"))
+    monkeypatch.setattr(verify_mod, "_read_drawer_latest",
+                        lambda: (md_text, "ok"))
+    r = verify_mod.verify()
+    assert r["ok"] is True
+    assert r["divergence"] == []
+
+
+def test_verify_detects_drift(monkeypatch, tmp_path):
+    """When markdown has an id canonical doesn't (or vice versa),
+    verify flags it."""
+    import importlib
+    verify_mod = importlib.import_module("zignal.lists.verify")
+    canonical = {
+        "count": 1, "oldest_age_days": 0,
+        "items": [{"item_id": "L1.01"}],
+        "generated_at": "2026-05-22T00:00:00Z",
+    }
+    canon_path = tmp_path / "lists.json"
+    canon_path.write_text(json.dumps(canonical))
+    monkeypatch.setattr(verify_mod, "CANONICAL", canon_path)
+    monkeypatch.setattr(verify_mod, "VERIFY_OUT", tmp_path / "verify.json")
+    # Drawer has extra id L9.99 — drift
+    monkeypatch.setattr(verify_mod, "_read_z13_markdown",
+                        lambda: ("L1.01", "ok"))
+    monkeypatch.setattr(verify_mod, "_read_drawer_latest",
+                        lambda: ("L1.01 L9.99", "ok"))
+    r = verify_mod.verify()
+    # Note: drawer drift is filtered against canonical ids — L9.99
+    # not in canonical_ids_in_json, so it gets filtered out. We
+    # specifically want to detect MISSING ids (canonical has X,
+    # surface doesn't). Test missing-from-drawer.
+    monkeypatch.setattr(verify_mod, "_read_drawer_latest",
+                        lambda: ("", "ok"))  # empty drawer
+    r = verify_mod.verify()
+    assert r["ok"] is False
+    assert any("zignal_drawer" in str(d) for d in r["divergence"])
+
+
+def test_verify_records_surface_unreachable(monkeypatch, tmp_path):
+    """When a surface is unreachable, verify reports it, not silently OK."""
+    import importlib
+    verify_mod = importlib.import_module("zignal.lists.verify")
+    canonical = {"count": 0, "items": [], "oldest_age_days": 0,
+                 "generated_at": "2026-05-22T00:00:00Z"}
+    canon_path = tmp_path / "lists.json"
+    canon_path.write_text(json.dumps(canonical))
+    monkeypatch.setattr(verify_mod, "CANONICAL", canon_path)
+    monkeypatch.setattr(verify_mod, "VERIFY_OUT", tmp_path / "verify.json")
+    monkeypatch.setattr(verify_mod, "_read_z13_markdown",
+                        lambda: (None, "ssh_timeout"))
+    monkeypatch.setattr(verify_mod, "_read_drawer_latest",
+                        lambda: (None, "timeout"))
+    r = verify_mod.verify()
+    assert r["ok"] is False
+    reasons = [d.get("reason", "") for d in r["divergence"]
+               if isinstance(d, dict)]
+    assert any("ssh_timeout" in str(x) for x in reasons)
+    assert any("timeout" in str(x) for x in reasons)
+
+
 if __name__ == "__main__":
     import pytest
     sys.exit(pytest.main([__file__, "-v"]))

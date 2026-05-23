@@ -7,5 +7,7 @@ Fusion's zignal_io adapter, and Claude's MEMORY.md.
 from .schema import UnfinishedItem
 from .walker import scan_local, scan_remote_z13
 from .emit import emit_all
+from .verify import verify
 
-__all__ = ["UnfinishedItem", "scan_local", "scan_remote_z13", "emit_all"]
+__all__ = ["UnfinishedItem", "scan_local", "scan_remote_z13",
+           "emit_all", "verify"]

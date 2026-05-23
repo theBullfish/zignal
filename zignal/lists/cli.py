@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from .walker import scan_local, scan_remote_z13
 from .emit import emit_all, _payload
+from .verify import verify
 
 TEMPLE_ROOTS = [
     "/mnt/work",
@@ -23,6 +24,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="Skip remote Z13 scan (Temple-only).")
     ap.add_argument("--dry-run", action="store_true",
                     help="Print summary; do not write outputs.")
+    ap.add_argument("--no-verify", action="store_true",
+                    help="Skip post-emit consistency verify.")
     args = ap.parse_args(argv)
 
     items = scan_local([Path(p) for p in args.temple_roots], host="temple")
@@ -48,6 +51,13 @@ def main(argv: list[str] | None = None) -> int:
     result = emit_all(items, remote_status)
     print(f"[lists] json={result['json_path']} "
           f"emit_status={result['emit_status']}")
+    if not args.no_verify:
+        v = verify()
+        print(f"[lists] verify ok={v['ok']} "
+              f"divergences={len(v['divergence'])}")
+        if not v["ok"]:
+            for d in v["divergence"]:
+                print(f"  drift: {d}")
     return 0
 
 

@@ -29,7 +29,8 @@ def _payload(items: list[UnfinishedItem],
              remote_status: dict[str, str] | None = None) -> dict:
     items_sorted = sorted(items, key=lambda x: (-x.age_days, x.source_path, x.item_id))
     return {
-        "generated_at": dt.datetime.utcnow().isoformat() + "Z",
+        "generated_at": dt.datetime.now(dt.timezone.utc)
+                          .strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z",
         "count": len(items_sorted),
         "oldest_age_days": items_sorted[0].age_days if items_sorted else 0,
         "remote_status": remote_status or {},
@@ -85,6 +86,11 @@ def _markdown(items: list[UnfinishedItem],
     if payload["count"] > 10:
         lines.append(f"_(+{payload['count'] - 10} more in lists.json)_")
         lines.append("")
+    # Manifest of ALL ids so the verify probe can see what is owed
+    # without parsing the canonical JSON. Hidden in an HTML comment
+    # so the human reader is not distracted.
+    all_ids = " ".join(it["item_id"] for it in payload["items"])
+    lines.append(f"<!-- LISTS_MANIFEST_IDS: {all_ids} -->")
     return "\n".join(lines) + "\n"
 
 
