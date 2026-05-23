@@ -21,9 +21,11 @@ from .schema import UnfinishedItem
 #   "L22.05 [DOING] 2026-05-22 14:10"  (status appendix)
 #   "- [PENDING] L22.05 ..." (bulleted list, status first — fusion-v2 form)
 # Capture order normalized to (id, status) regardless of input shape.
-_ITEM_ID_FIRST = re.compile(r"^\s*(L\d+(?:\.\d+)*[a-z]?)\s+\[([A-Z]+)\]")
+_ITEM_ID_FIRST = re.compile(
+    r"^\s*(L\d+(?:\.\d+)*[a-z]?)\s+\[([A-Z]+)(?:\s[^\]]*)?\]"
+)
 _ITEM_STATUS_FIRST = re.compile(
-    r"^\s*[-*]?\s*\[([A-Z]+)\]\s+(L\d+(?:\.\d+)*[a-z]?)"
+    r"^\s*[-*]?\s*\[([A-Z]+)(?:\s[^\]]*)?\]\s+(L\d+(?:\.\d+)*[a-z]?)"
 )
 
 
@@ -181,9 +183,9 @@ def scan_local(roots: Iterable[Path], host: str,
 
 REMOTE_WALKER = r'''
 import os, re, json, sys, datetime as dt
-ID_FIRST = re.compile(r"^\s*(L\d+(?:\.\d+)*[a-z]?)\s+\[([A-Z]+)\]")
-STATUS_FIRST = re.compile(r"^\s*[-*]?\s*\[([A-Z]+)\]\s+(L\d+(?:\.\d+)*[a-z]?)")
-RANGE = re.compile(r"^\s*[-*]?\s*(L\d+(?:\.\d+)+)\s*[-–—]\s*(L\d+(?:\.\d+)+)\s+\[([A-Z]+)\]")
+ID_FIRST = re.compile(r"^\s*(L\d+(?:\.\d+)*[a-z]?)\s+\[([A-Z]+)(?:\s[^\]]*)?\]")
+STATUS_FIRST = re.compile(r"^\s*[-*]?\s*\[([A-Z]+)(?:\s[^\]]*)?\]\s+(L\d+(?:\.\d+)*[a-z]?)")
+RANGE = re.compile(r"^\s*[-*]?\s*(L\d+(?:\.\d+)+)\s*[-–—]\s*(L\d+(?:\.\d+)+)\s+\[([A-Z]+)(?:\s[^\]]*)?\]")
 DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 OPEN = {"PENDING","DOING","BLOCKED","PARTIAL","DEFER","DEFERRED"}
 EXCLUDE = {".git","node_modules","__pycache__",".venv","venv",

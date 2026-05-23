@@ -105,6 +105,23 @@ def test_parse_file_expands_range(tmp_path: Path):
     assert items == []
 
 
+def test_parse_file_status_with_embedded_date(tmp_path: Path):
+    """`[DONE 2026-05-22] L2.01` format (primitive-lab) must be recognized
+    as DONE, not silently fall through to PENDING."""
+    plan = tmp_path / "BUILD_PLAN.md"
+    plan.write_text(
+        "- [DONE 2026-05-22] L2.01 already closed item\n"
+        "- [PENDING] L2.04 still open\n"
+        "L2.05 [PARTIAL 2026-05-22 — gap statement] mixed form also OK\n"
+    )
+    import datetime as dt
+    items = _parse_file(plan, host="temple", today=dt.date(2026, 5, 22))
+    by = {i.item_id: i.status for i in items}
+    assert "L2.01" not in by  # DONE — must not surface
+    assert by.get("L2.04") == "PENDING"
+    assert by.get("L2.05") == "PARTIAL"
+
+
 def test_parse_file_three_level_ids(tmp_path: Path):
     """L39.18.04 must NOT collapse to L39 — three-level IDs are real."""
     plan = tmp_path / "BUILD_PLAN.md"
