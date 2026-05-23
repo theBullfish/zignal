@@ -376,3 +376,10 @@ L2.10 [DONE]  2026-05-22 — L1.12-L1.16 added with DoD lines. Retro:
   lied retros. L2.05/L2.06/L2.09 BLOCKED on Temple offline; rest
   closed with real retros. Remediation queued as L1.12-L1.16.
   L1.16 BLOCKED on same Temple outage.
+2026-05-22 — Adversarial review (Gate 5) on the audit-pass killed 7
+  items. Real fixes: L1.12 PARTIAL→SKIPPED (DoD unupgradeable),
+  L1.14 DONE→PARTIAL (deploy still owed), L1.16a resume-trigger
+  script landed, 10 external-validator tests added, walker/emit/
+  Fusion now distinguish unknown / degraded / clear properly,
+  ListsStatus.alarm fixed. Commits 395b352 (zignal) +
+  bab69545 (fusion).
