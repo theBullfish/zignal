@@ -211,13 +211,21 @@ def detect_convo_room(content: str) -> str:
 # =============================================================================
 
 
+def _embedding_function():
+    """Return the default chromadb embedding function (all-MiniLM-L6-v2, 384-dim).
+    Uses the locally cached model if available; downloads once on first run."""
+    from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+    return DefaultEmbeddingFunction()
+
+
 def get_collection(palace_path: str):
     os.makedirs(palace_path, exist_ok=True)
+    ef = _embedding_function()
     client = chromadb.PersistentClient(path=palace_path)
     try:
-        return client.get_collection("signal_drawers")
+        return client.get_collection("signal_drawers", embedding_function=ef)
     except Exception:
-        return client.create_collection("signal_drawers")
+        return client.create_collection("signal_drawers", embedding_function=ef)
 
 
 def file_already_mined(collection, source_file: str) -> bool:
